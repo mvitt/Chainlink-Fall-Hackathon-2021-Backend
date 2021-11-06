@@ -29,11 +29,11 @@ contract Betting is Ownable, ChainlinkClient {
 
     event winnerPayed(address indexed winner, uint256 amount);
 
-    constructor() {
+    constructor(address _oracle, bytes32 _jobId, uint256 _fee) {
         setPublicChainlinkToken(); //call on kovan testnet
-        oracle = 0xbe79b86e93d09d6dda636352a06491ec8e7bdf12;
-        jobId = "93b72982721945268cf3ba75894f773e";
-        fee = 100000000000000000; //0.1 LINK
+        oracle = _oracle;//0xbe79b86e93d09d6dda636352a06491ec8e7bdf12;
+        jobId = _jobId; //"93b72982721945268cf3ba75894f773e";
+        fee = _fee; //100000000000000000; //0.1 LINK
     }
 
     function requestWeatherTemperature(string memory _city) public {

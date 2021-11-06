@@ -37,19 +37,12 @@ contract Betting is Ownable, ChainlinkClient {
     }
 
     function requestWeatherTemperature(string memory _city) public {
-        Chainlink.Request memory request = buildChainlinkRequest(
-            jobId,
-            address(this),
-            this.fulfillWeatherTemperature.selector
-        );
+        Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.fulfillWeatherTemperature.selector);
         request.add("city", _city);
         sendChainlinkRequestTo(oracle, request, fee);
     }
 
-    function fulfillWeatherTemperature(bytes32 _requestId, uint256 _result)
-        public
-        recordChainlinkFulfillment(_requestId)
-    {
+    function fulfillWeatherTemperature(bytes32 _requestId, uint256 _result) public recordChainlinkFulfillment(_requestId) {
         result = _result;
     }
 

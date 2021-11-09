@@ -9,8 +9,8 @@ contract Betting is Ownable, ChainlinkClient {
     uint256 public result;
     uint256 public oddsAbove;
     uint256 public oddsBelow;
-    uint256 bettingPeriod = block.timestamp + 7 days;
-    uint256 callTimestamp;
+    uint256 private bettingPeriod = block.timestamp + 7 days;
+    uint256 private callTimestamp;
     address private oracle;
     bytes32 private jobId;
     uint256 private fee;
@@ -18,11 +18,11 @@ contract Betting is Ownable, ChainlinkClient {
 
     address payable public contractAddress;
 
-    mapping(address => User) users;
+    mapping(address => User) public users;
 
-    address[] usersWhoHaveVoted;
+    address[] public usersWhoHaveVoted;
 
-    event winnerPayed(address indexed winner, uint256 amount);
+    event WinnerPayed(address indexed winner, uint256 amount);
 
     constructor() {
         setPublicChainlinkToken(); //call on kovan testnet
@@ -30,11 +30,13 @@ contract Betting is Ownable, ChainlinkClient {
         jobId = "235f8b1eeb364efc83c26d0bef2d0c01";
         fee = 0.1 * 10 ** 18; //0.1 LINK
         contractAddress = payable(address(this));
+        //Set Chicago as the default city
+        setCity("Chicago");
     }
 
-    function requestWeatherTemperature(string memory _city) public {
+    function requestWeatherTemperature() public {
         Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.fulfillWeatherTemperature.selector);
-        request.add("city", _city);
+        request.add("city", city);
         sendChainlinkRequestTo(oracle, request, fee);
     }
 
@@ -42,11 +44,14 @@ contract Betting is Ownable, ChainlinkClient {
         result = _result;
     }
 
-    function setUserGuess(uint256 _guess, string memory _city) public payable {
+    function setCity(string memory _city) public onlyOwner {
+        city = _city;
+    }
+
+    function setUserGuess(uint256 _guess) public payable {
         require(!users[msg.sender].hasGuessed, "User already guessed!");
         require(block.timestamp < bettingPeriod, "The betting period is over.");
 
-        city = _city; //we will assume users are just guessing the weather for one city for now, put here in case we want to change later
         User memory user = User(msg.sender, _guess, msg.value, true);
         usersWhoHaveVoted.push(msg.sender);
 
@@ -54,7 +59,7 @@ contract Betting is Ownable, ChainlinkClient {
 
         // this guy needs to be called periodically to adjust odds, ideally by keepers but I have just set it to fire off every hour or so after a guess
         if (block.timestamp - callTimestamp > 1 hours) {
-            requestWeatherTemperature(_city);
+            requestWeatherTemperature();
 
             callTimestamp = block.timestamp;
         }
@@ -95,7 +100,9 @@ contract Betting is Ownable, ChainlinkClient {
     //this function establishes the final update that will be used to calculate the winner
     function finalResult() private onlyOwner {
         require(block.timestamp > bettingPeriod, "can only call after users bet");
-        requestWeatherTemperature(city);
+        requestWeatherTemperature();
+        payWinners();
+        resetLottery();
     }
 
     function getNumberOfWinners() internal view returns (uint256) {
@@ -142,7 +149,7 @@ contract Betting is Ownable, ChainlinkClient {
 
         for (uint256 i = 0; i < winners.length; ++i) {
             (bool sent, bytes memory data) = payable(winners[i]).call{value: amountPerWinner}("");
-            emit winnerPayed(winners[i], amountPerWinner);
+            emit WinnerPayed(winners[i], amountPerWinner);
         }
     }
 }

@@ -6,7 +6,6 @@ import "./User.sol";
 
 contract Betting is Ownable, ChainlinkClient {
     using Chainlink for Chainlink.Request;
-    uint256 public volume;
     uint256 public result;
     uint256 public oddsAbove;
     uint256 public oddsBelow;
@@ -20,7 +19,6 @@ contract Betting is Ownable, ChainlinkClient {
     address payable public contractAddress;
 
     mapping(address => User) users;
-    uint256[] guessValues;
 
     address[] usersWhoHaveVoted;
 
@@ -54,8 +52,6 @@ contract Betting is Ownable, ChainlinkClient {
 
         users[msg.sender] = user;
 
-        guessValues.push(_guess);
-
         // this guy needs to be called periodically to adjust odds, ideally by keepers but I have just set it to fire off every hour or so after a guess
         if (block.timestamp - callTimestamp > 1 hours) {
             requestWeatherTemperature(_city);
@@ -65,34 +61,31 @@ contract Betting is Ownable, ChainlinkClient {
     }
 
     function setOdds() public {
-        require(guessValues.length > 0, "People need to have guessed");
+        require(usersWhoHaveVoted.length > 0, "People need to have guessed");
 
         uint256 aboveValueGuesses = 0;
         uint256 belowValueGuesses = 0;
         uint256 equalValueGuesses = 0;
-        for (uint256 i = 0; i < guessValues.length; i++) {
-            if (guessValues[i] < result) {
+        User[] memory players = getAllPlayers();
+        for (uint256 i = 0; i < players.length; i++) {
+            if (players[i].guess < result) {
                 belowValueGuesses++;
-            } else if (guessValues[i] > result) {
+            } else if (players[i].guess > result) {
                 aboveValueGuesses++;
             } else {
                 equalValueGuesses++;
             }
         }
         //odds are multiplied by 10**9 for fixed point math, front end can convert them back to decimals
-        oddsAbove = ((aboveValueGuesses * (10**9)) /
-            (belowValueGuesses + equalValueGuesses));
-        oddsBelow = ((belowValueGuesses * (10**9)) /
-            (aboveValueGuesses + equalValueGuesses));
+        oddsAbove = ((aboveValueGuesses * (10**9)) / (belowValueGuesses + equalValueGuesses));
+        oddsBelow = ((belowValueGuesses * (10**9)) / (aboveValueGuesses + equalValueGuesses));
     }
 
     function resetLottery() public onlyOwner {
         for (uint256 i = 0; i < usersWhoHaveVoted.length; i++) {
             delete users[usersWhoHaveVoted[i]];
-            delete guessValues[i];
         }
         delete usersWhoHaveVoted;
-        delete guessValues;
     }
 
     function getPrizeMoney() public view returns (uint256) {
@@ -108,12 +101,21 @@ contract Betting is Ownable, ChainlinkClient {
     function getNumberOfWinners() internal view returns (uint256) {
         uint256 count = 0;
 
-        for (uint256 i = 0; i < guessValues.length; i++) {
-            if (guessValues[i] == result) {
+        for (uint256 i = 0; i < usersWhoHaveVoted.length; i++) {
+            if (users[usersWhoHaveVoted[i]].guess == result){
                 count++;
             }
         }
         return count;
+    }
+
+    function getAllPlayers() internal view returns (User[] memory) {
+        User[] memory players = new User[](usersWhoHaveVoted.length); 
+
+        for (uint256 i = 0; i < usersWhoHaveVoted.length; i++) {
+            players[i] = users[usersWhoHaveVoted[i]];
+        }
+        return players;
     }
 
     function getWinners() internal view returns (address[] memory) {
@@ -139,9 +141,7 @@ contract Betting is Ownable, ChainlinkClient {
         uint256 amountPerWinner = (contractAddress.balance / winners.length);
 
         for (uint256 i = 0; i < winners.length; ++i) {
-            (bool sent, bytes memory data) = payable(winners[i]).call{
-                value: amountPerWinner
-            }("");
+            (bool sent, bytes memory data) = payable(winners[i]).call{value: amountPerWinner}("");
             emit winnerPayed(winners[i], amountPerWinner);
         }
     }

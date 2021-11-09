@@ -47,11 +47,13 @@ contract Betting is Ownable, ChainlinkClient {
     function setUserGuess(uint256 _guess, string memory _city) public payable {
         require(!users[msg.sender].hasGuessed, "User already guessed!");
         require(block.timestamp < bettingPeriod, "The betting period is over.");
-        require(msg.value == 100 wei, "Need to bet the minimum to play.");
 
         city = _city; //we will assume users are just guessing the weather for one city for now, put here in case we want to change later
-        User memory user = User(msg.sender, _guess, true);
+        User memory user = User(msg.sender, _guess, msg.value, true);
         usersWhoHaveVoted.push(msg.sender);
+
+        users[msg.sender] = user;
+
         guessValues.push(_guess);
 
         // this guy needs to be called periodically to adjust odds, ideally by keepers but I have just set it to fire off every hour or so after a guess

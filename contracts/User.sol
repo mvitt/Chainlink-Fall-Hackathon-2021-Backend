@@ -4,5 +4,6 @@ pragma solidity ^0.8.9;
 struct User {
         address id;
         uint256 guess;
+        uint256 amountBet;
         bool hasGuessed;
     }

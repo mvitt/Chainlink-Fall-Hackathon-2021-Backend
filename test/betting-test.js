@@ -16,8 +16,6 @@ describe("Betting Contract", () => {
   });
 
   it('is a proper address', async () => {
-    console.log(contract.address);
     expect(contract.address).to.be.properAddress;
   });
-
 });

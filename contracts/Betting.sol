@@ -32,7 +32,7 @@ contract Betting is Ownable, ChainlinkClient {
         setCity("Chicago");
     }
 
-    function requestTemperaturePrediction() public {
+    function requestTemperaturePrediction() public onlyOwner {
         Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.fulfillTemperaturePrediction.selector);
         request.add("city", city);
         sendChainlinkRequestTo(oracle, request, fee);
@@ -43,7 +43,7 @@ contract Betting is Ownable, ChainlinkClient {
     }
 
 
-    function requestActualTemperature() public {
+    function requestActualTemperature() private {
         Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.fulfillActualTemperature.selector);
         request.add("city", city);
         sendChainlinkRequestTo(oracle, request, fee);
@@ -68,7 +68,7 @@ contract Betting is Ownable, ChainlinkClient {
         users[msg.sender] = user;
     }
 
-    function clearBets() public onlyOwner {
+    function clearBets() private {
         for (uint256 i = 0; i < usersWhoHaveVoted.length; i++) {
             delete users[usersWhoHaveVoted[i]];
         }
@@ -79,8 +79,7 @@ contract Betting is Ownable, ChainlinkClient {
         return (contractAddress.balance * 99) / 100; //we keep the 1% fee
     }
 
-    //this function establishes the final update that will be used to calculate the winner
-    function finalResult() private onlyOwner {
+    function finalResult() public onlyOwner {
         require(block.timestamp > bettingPeriod, "can only call after users bet");
         requestActualTemperature();
         payWinners();
@@ -99,12 +98,12 @@ contract Betting is Ownable, ChainlinkClient {
             uint256 amountForWinner = (users[winners[i]].winningPercentage / 100) * getPrizeMoney();
 
             payable(winners[i]).call{value: amountForWinner}("");
-            
+
             emit WinnerPayed(winners[i], amountForWinner);
         }
     }
 
-    function sortPlayersByBetsAndGetWinners() internal returns (address[] memory) {
+    function sortPlayersByBetsAndGetWinners() private returns (address[] memory) {
         Bet finalResultIs = Bet.EMPTY;
         uint256 totalAmountBetByWinners = 0;
         address[] memory addressesOfWinners;

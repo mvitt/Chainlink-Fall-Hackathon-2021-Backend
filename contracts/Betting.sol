@@ -3,24 +3,21 @@ pragma solidity ^0.8.10;
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./User.sol";
+import "./GuessIs.sol";
 
 contract Betting is Ownable, ChainlinkClient {
     using Chainlink for Chainlink.Request;
-    uint256 public result;
-    uint256 public oddsAbove;
-    uint256 public oddsBelow;
-    uint256 private bettingPeriod = block.timestamp + 7 days;
-    uint256 private callTimestamp;
+
     address private oracle;
     bytes32 private jobId;
     uint256 private fee;
+
+    uint256 public result;
     string public city;
-
+    uint256 private bettingPeriod = block.timestamp + 7 days;
     address payable public contractAddress;
-
-    mapping(address => User) public users;
-
     address[] public usersWhoHaveVoted;
+    mapping(address => User) public users;
 
     event WinnerPayed(address indexed winner, uint256 amount);
 
@@ -48,45 +45,17 @@ contract Betting is Ownable, ChainlinkClient {
         city = _city;
     }
 
-    function setUserGuess(uint256 _guess) public payable {
+    function placeBet(uint256 _guess) public payable {
         require(!users[msg.sender].hasGuessed, "User already guessed!");
         require(block.timestamp < bettingPeriod, "The betting period is over.");
 
-        User memory user = User(msg.sender, _guess, msg.value, true);
+        User memory user = User(msg.sender, _guess, true, GuessIs.EMPTY, msg.value, 0);
         usersWhoHaveVoted.push(msg.sender);
 
         users[msg.sender] = user;
-
-        // this guy needs to be called periodically to adjust odds, ideally by keepers but I have just set it to fire off every hour or so after a guess
-        if (block.timestamp - callTimestamp > 1 hours) {
-            requestWeatherTemperature();
-
-            callTimestamp = block.timestamp;
-        }
     }
 
-    function setOdds() public {
-        require(usersWhoHaveVoted.length > 0, "People need to have guessed");
-
-        uint256 aboveValueGuesses = 0;
-        uint256 belowValueGuesses = 0;
-        uint256 equalValueGuesses = 0;
-        User[] memory players = getAllPlayers();
-        for (uint256 i = 0; i < players.length; i++) {
-            if (players[i].guess < result) {
-                belowValueGuesses++;
-            } else if (players[i].guess > result) {
-                aboveValueGuesses++;
-            } else {
-                equalValueGuesses++;
-            }
-        }
-        //odds are multiplied by 10**9 for fixed point math, front end can convert them back to decimals
-        oddsAbove = ((aboveValueGuesses * (10**9)) / (belowValueGuesses + equalValueGuesses));
-        oddsBelow = ((belowValueGuesses * (10**9)) / (aboveValueGuesses + equalValueGuesses));
-    }
-
-    function resetLottery() public onlyOwner {
+    function clearBets() public onlyOwner {
         for (uint256 i = 0; i < usersWhoHaveVoted.length; i++) {
             delete users[usersWhoHaveVoted[i]];
         }
@@ -102,54 +71,51 @@ contract Betting is Ownable, ChainlinkClient {
         require(block.timestamp > bettingPeriod, "can only call after users bet");
         requestWeatherTemperature();
         payWinners();
-        resetLottery();
-    }
-
-    function getNumberOfWinners() internal view returns (uint256) {
-        uint256 count = 0;
-
-        for (uint256 i = 0; i < usersWhoHaveVoted.length; i++) {
-            if (users[usersWhoHaveVoted[i]].guess == result){
-                count++;
-            }
-        }
-        return count;
-    }
-
-    function getAllPlayers() internal view returns (User[] memory) {
-        User[] memory players = new User[](usersWhoHaveVoted.length); 
-
-        for (uint256 i = 0; i < usersWhoHaveVoted.length; i++) {
-            players[i] = users[usersWhoHaveVoted[i]];
-        }
-        return players;
-    }
-
-    function getWinners() internal view returns (address[] memory) {
-        uint256 count = 0;
-        address[] memory winners = new address[](getNumberOfWinners());
-
-        for (uint256 i = 0; i < usersWhoHaveVoted.length; i++) {
-            if (users[usersWhoHaveVoted[i]].guess == result) {
-                winners[count] = users[usersWhoHaveVoted[i]].id;
-                count++;
-            }
-        }
-
-        return winners;
+        clearBets();
     }
 
     function payWinners() private {
         require(contractAddress.balance >= 0 wei, "No bets placed");
 
-        address[] memory winners = getWinners();
+        address[] memory winners = sortPlayersByBetsAndGetWinners();
         require(winners.length > 0, "No winners this round");
 
-        uint256 amountPerWinner = (contractAddress.balance / winners.length);
 
         for (uint256 i = 0; i < winners.length; ++i) {
-            (bool sent, bytes memory data) = payable(winners[i]).call{value: amountPerWinner}("");
-            emit WinnerPayed(winners[i], amountPerWinner);
+
+            uint256 amountForWinner = (users[winners[i]].winningPercentage / 100) * getPrizeMoney();
+
+            (bool sent, bytes memory data) = payable(winners[i]).call{value: amountForWinner}("");
+            emit WinnerPayed(winners[i], amountForWinner);
         }
+    }
+
+    function sortPlayersByBetsAndGetWinners() internal returns (address[] memory) {
+
+        uint256 totalAmountBetByWinners = 0;
+        address[] memory addressesOfWinners;
+        uint256 winnerCount = 0;
+
+        for (uint256 i = 0; i < usersWhoHaveVoted.length; i++) {
+            if (users[usersWhoHaveVoted[i]].guess == result){
+                users[usersWhoHaveVoted[i]].guessIs = GuessIs.EQUAL_TO;
+                totalAmountBetByWinners = totalAmountBetByWinners + users[usersWhoHaveVoted[i]].amountBet;
+                addressesOfWinners[winnerCount] = users[usersWhoHaveVoted[i]].id;
+                winnerCount++;
+                continue;
+            } else if (users[usersWhoHaveVoted[i]].guess > result){
+                users[usersWhoHaveVoted[i]].guessIs = GuessIs.ABOVE;
+                continue;
+            } else if (users[usersWhoHaveVoted[i]].guess < result){
+                users[usersWhoHaveVoted[i]].guessIs = GuessIs.BELOW;
+                continue;
+            }
+        }
+
+        for (uint256 i = 0; i < addressesOfWinners.length; i++) {    
+            users[addressesOfWinners[i]].winningPercentage = (users[addressesOfWinners[i]].amountBet / totalAmountBetByWinners) * 100;
+        }
+
+        return addressesOfWinners;
     }
 }

@@ -3,7 +3,7 @@ pragma solidity ^0.8.10;
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./User.sol";
-import "./GuessIs.sol";
+import "./Bet.sol";
 
 contract Betting is Ownable, ChainlinkClient {
     using Chainlink for Chainlink.Request;
@@ -12,8 +12,9 @@ contract Betting is Ownable, ChainlinkClient {
     bytes32 private jobId;
     uint256 private fee;
 
-    uint256 public result;
     string public city;
+    uint256 public temperaturePrediction;
+    uint256 public actualTemperature;
     uint256 private bettingPeriod = block.timestamp + 7 days;
     address payable public contractAddress;
     address[] public usersWhoHaveVoted;
@@ -31,27 +32,39 @@ contract Betting is Ownable, ChainlinkClient {
         setCity("Chicago");
     }
 
-    function requestWeatherTemperature() public {
-        Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.fulfillWeatherTemperature.selector);
+    function requestTemperaturePrediction() public {
+        Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.fulfillTemperaturePrediction.selector);
         request.add("city", city);
         sendChainlinkRequestTo(oracle, request, fee);
     }
 
-    function fulfillWeatherTemperature(bytes32 _requestId, uint256 _result) public recordChainlinkFulfillment(_requestId) {
-        result = _result;
+    function fulfillTemperaturePrediction(bytes32 _requestId, uint256 _result) public recordChainlinkFulfillment(_requestId) {
+        temperaturePrediction = _result;
     }
+
+
+    function requestActualTemperature() public {
+        Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.fulfillActualTemperature.selector);
+        request.add("city", city);
+        sendChainlinkRequestTo(oracle, request, fee);
+    }
+
+    function fulfillActualTemperature(bytes32 _requestId, uint256 _result) public recordChainlinkFulfillment(_requestId) {
+        actualTemperature = _result;
+    }
+
+    
 
     function setCity(string memory _city) public onlyOwner {
         city = _city;
     }
 
-    function placeBet(uint256 _guess) public payable {
-        require(!users[msg.sender].hasGuessed, "User already guessed!");
+    function placeBet(Bet _bet) public payable {
+        require(!users[msg.sender].hasBet, "User already bet!");
         require(block.timestamp < bettingPeriod, "The betting period is over.");
 
-        User memory user = User(msg.sender, _guess, true, GuessIs.EMPTY, msg.value, 0);
+        User memory user = User(msg.sender, _bet, true, msg.value, 0);
         usersWhoHaveVoted.push(msg.sender);
-
         users[msg.sender] = user;
     }
 
@@ -69,7 +82,7 @@ contract Betting is Ownable, ChainlinkClient {
     //this function establishes the final update that will be used to calculate the winner
     function finalResult() private onlyOwner {
         require(block.timestamp > bettingPeriod, "can only call after users bet");
-        requestWeatherTemperature();
+        requestActualTemperature();
         payWinners();
         clearBets();
     }
@@ -78,37 +91,36 @@ contract Betting is Ownable, ChainlinkClient {
         require(contractAddress.balance >= 0 wei, "No bets placed");
 
         address[] memory winners = sortPlayersByBetsAndGetWinners();
+
         require(winners.length > 0, "No winners this round");
 
-
-        for (uint256 i = 0; i < winners.length; ++i) {
+        for (uint256 i = 0; i < winners.length; i++) {
 
             uint256 amountForWinner = (users[winners[i]].winningPercentage / 100) * getPrizeMoney();
 
-            (bool sent, bytes memory data) = payable(winners[i]).call{value: amountForWinner}("");
+            payable(winners[i]).call{value: amountForWinner}("");
+            
             emit WinnerPayed(winners[i], amountForWinner);
         }
     }
 
     function sortPlayersByBetsAndGetWinners() internal returns (address[] memory) {
-
+        Bet finalResultIs = Bet.EMPTY;
         uint256 totalAmountBetByWinners = 0;
         address[] memory addressesOfWinners;
         uint256 winnerCount = 0;
 
+        if (actualTemperature > temperaturePrediction) {
+            finalResultIs = Bet.OVER;
+        } else if (actualTemperature < temperaturePrediction) {
+            finalResultIs = Bet.UNDER;
+        }
+
         for (uint256 i = 0; i < usersWhoHaveVoted.length; i++) {
-            if (users[usersWhoHaveVoted[i]].guess == result){
-                users[usersWhoHaveVoted[i]].guessIs = GuessIs.EQUAL_TO;
+            if (users[usersWhoHaveVoted[i]].bet == finalResultIs){
                 totalAmountBetByWinners = totalAmountBetByWinners + users[usersWhoHaveVoted[i]].amountBet;
                 addressesOfWinners[winnerCount] = users[usersWhoHaveVoted[i]].id;
                 winnerCount++;
-                continue;
-            } else if (users[usersWhoHaveVoted[i]].guess > result){
-                users[usersWhoHaveVoted[i]].guessIs = GuessIs.ABOVE;
-                continue;
-            } else if (users[usersWhoHaveVoted[i]].guess < result){
-                users[usersWhoHaveVoted[i]].guessIs = GuessIs.BELOW;
-                continue;
             }
         }
 

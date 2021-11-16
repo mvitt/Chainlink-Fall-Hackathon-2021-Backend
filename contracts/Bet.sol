@@ -1,4 +1,4 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.10;
 
-enum GuessIs{EMPTY, EQUAL_TO, ABOVE, BELOW}
+enum Bet{EMPTY, OVER, UNDER}

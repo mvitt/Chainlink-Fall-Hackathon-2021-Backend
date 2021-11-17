@@ -15,7 +15,7 @@ async function main() {
 
   // We get the contract to deploy
   const Factory = await hre.ethers.getContractFactory("Betting");
-  const bettingContract = await Factory.deploy();
+  const bettingContract = await Factory.deploy("Chicago");
 
   await bettingContract.deployed();
 

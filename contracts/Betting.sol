@@ -4,6 +4,7 @@ import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./User.sol";
 import "./Bet.sol";
+import "./WeatherType.sol";
 
 contract Betting is Ownable, ChainlinkClient {
     using Chainlink for Chainlink.Request;
@@ -22,18 +23,18 @@ contract Betting is Ownable, ChainlinkClient {
 
     event WinnerPayed(address indexed winner, uint256 amount);
 
-    constructor() {
+    constructor(string memory _city) {
         setPublicChainlinkToken(); //call on kovan testnet
         oracle = 0xAA1DC356dc4B18f30C347798FD5379F3D77ABC5b;
         jobId = "235f8b1eeb364efc83c26d0bef2d0c01";
         fee = 0.1 * 10 ** 18; //0.1 LINK
         contractAddress = payable(address(this));
-        //Set Chicago as the default city
-        setCity("Chicago");
+        city = _city;
     }
 
-    function requestTemperaturePrediction() public onlyOwner {
-        Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.fulfillTemperaturePrediction.selector);
+    function requestTemperatureFor(WeatherType _type) public onlyOwner {
+        require(_type != WeatherType.EMPTY, "WeatherType must not be: EMPTY");
+        Chainlink.Request memory request = (_type == WeatherType.PREDICTION) ? buildChainlinkRequest(jobId, address(this), this.fulfillTemperaturePrediction.selector) : buildChainlinkRequest(jobId, address(this), this.fulfillActualTemperature.selector);
         request.add("city", city);
         sendChainlinkRequestTo(oracle, request, fee);
     }
@@ -42,21 +43,8 @@ contract Betting is Ownable, ChainlinkClient {
         temperaturePrediction = _result;
     }
 
-
-    function requestActualTemperature() private {
-        Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.fulfillActualTemperature.selector);
-        request.add("city", city);
-        sendChainlinkRequestTo(oracle, request, fee);
-    }
-
     function fulfillActualTemperature(bytes32 _requestId, uint256 _result) public recordChainlinkFulfillment(_requestId) {
         actualTemperature = _result;
-    }
-
-    
-
-    function setCity(string memory _city) public onlyOwner {
-        city = _city;
     }
 
     function placeBet(Bet _bet) public payable {
@@ -77,30 +65,6 @@ contract Betting is Ownable, ChainlinkClient {
 
     function getPrizeMoney() public view returns (uint256) {
         return (contractAddress.balance * 99) / 100; //we keep the 1% fee
-    }
-
-    function finalResult() public onlyOwner {
-        require(block.timestamp > bettingPeriod, "can only call after users bet");
-        requestActualTemperature();
-        payWinners();
-        clearBets();
-    }
-
-    function payWinners() private {
-        require(contractAddress.balance >= 0 wei, "No bets placed");
-
-        address[] memory winners = sortPlayersByBetsAndGetWinners();
-
-        require(winners.length > 0, "No winners this round");
-
-        for (uint256 i = 0; i < winners.length; i++) {
-
-            uint256 amountForWinner = (users[winners[i]].winningPercentage / 100) * getPrizeMoney();
-
-            payable(winners[i]).call{value: amountForWinner}("");
-
-            emit WinnerPayed(winners[i], amountForWinner);
-        }
     }
 
     function sortPlayersByBetsAndGetWinners() private returns (address[] memory) {
@@ -128,5 +92,29 @@ contract Betting is Ownable, ChainlinkClient {
         }
 
         return addressesOfWinners;
+    }
+
+    function payWinners() private {
+        require(contractAddress.balance >= 0 wei, "No bets placed");
+
+        address[] memory winners = sortPlayersByBetsAndGetWinners();
+
+        require(winners.length > 0, "No winners this round");
+
+        for (uint256 i = 0; i < winners.length; i++) {
+
+            uint256 amountForWinner = (users[winners[i]].winningPercentage / 100) * getPrizeMoney();
+
+            payable(winners[i]).call{value: amountForWinner}("");
+
+            emit WinnerPayed(winners[i], amountForWinner);
+        }
+    }
+
+    function finalResult() public onlyOwner {
+        require(block.timestamp > bettingPeriod, "can only call after users bet");
+        requestTemperatureFor(WeatherType.ACTUAL);
+        payWinners();
+        clearBets();
     }
 }

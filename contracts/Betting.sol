@@ -16,7 +16,7 @@ contract Betting is Ownable, ChainlinkClient {
     string public city;
     uint256 public temperaturePrediction;
     uint256 public actualTemperature;
-    uint256 private bettingPeriod = block.timestamp + 7 days;
+    uint256 private bettingPeriodClosedAt;
     address payable public contractAddress;
     address[] public usersWhoHaveVoted;
     mapping(address => User) public users;
@@ -29,7 +29,18 @@ contract Betting is Ownable, ChainlinkClient {
         jobId = "235f8b1eeb364efc83c26d0bef2d0c01";
         fee = 0.1 * 10 ** 18; //0.1 LINK
         contractAddress = payable(address(this));
+        bettingPeriodClosedAt = block.timestamp + 7 days;
         city = _city;
+    }
+
+    modifier verifyBettingPeriodOpen() {
+        require(block.timestamp < bettingPeriodClosedAt, "The betting period is open.");
+        _;
+    }
+
+    modifier verifyBettingPeriodClosed() {
+        require(block.timestamp > bettingPeriodClosedAt, "The betting period is over.");
+        _;
     }
 
     function requestTemperatureFor(WeatherType _type) public onlyOwner {
@@ -47,9 +58,8 @@ contract Betting is Ownable, ChainlinkClient {
         actualTemperature = _result;
     }
 
-    function placeBet(Bet _bet) public payable {
+    function placeBet(Bet _bet) public payable verifyBettingPeriodOpen {
         require(!users[msg.sender].hasBet, "User already bet!");
-        require(block.timestamp < bettingPeriod, "The betting period is over.");
 
         User memory user = User(msg.sender, _bet, true, msg.value, 0);
         usersWhoHaveVoted.push(msg.sender);
@@ -111,10 +121,12 @@ contract Betting is Ownable, ChainlinkClient {
         }
     }
 
-    function finalResult() public onlyOwner {
-        require(block.timestamp > bettingPeriod, "can only call after users bet");
+    function finalResult() public onlyOwner verifyBettingPeriodClosed {
         requestTemperatureFor(WeatherType.ACTUAL);
         payWinners();
         clearBets();
+
+        //Reset betting period for next cycle
+        bettingPeriodClosedAt = block.timestamp + 7 days;
     }
 }

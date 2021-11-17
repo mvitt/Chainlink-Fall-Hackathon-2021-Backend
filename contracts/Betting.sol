@@ -43,6 +43,10 @@ contract Betting is Ownable, ChainlinkClient {
         _;
     }
 
+    function getTimeLeft() external view returns(uint256) {
+        return (block.timestamp < bettingPeriodClosedAt) ? bettingPeriodClosedAt - block.timestamp : 0;
+    }
+
     function requestTemperatureFor(WeatherType _type) public onlyOwner {
         require(_type != WeatherType.EMPTY, "WeatherType must not be: EMPTY");
         Chainlink.Request memory request = (_type == WeatherType.PREDICTION) ? buildChainlinkRequest(jobId, address(this), this.fulfillTemperaturePrediction.selector) : buildChainlinkRequest(jobId, address(this), this.fulfillActualTemperature.selector);

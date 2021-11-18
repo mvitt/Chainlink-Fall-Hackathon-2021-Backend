@@ -10,8 +10,8 @@ contract Betting is Ownable, ChainlinkClient {
     using Chainlink for Chainlink.Request;
 
     address private oracle;
-    bytes32 private jobId;
-    uint256 private fee;
+    bytes32 constant JOB_ID = "235f8b1eeb364efc83c26d0bef2d0c01";
+    uint256 constant FEE = LINK_DIVISIBILITY / 10; //0.1 LINK  aka 0.1 * 10 ** 18; 
 
     string public city;
     uint256 public temperaturePrediction;
@@ -23,11 +23,15 @@ contract Betting is Ownable, ChainlinkClient {
 
     event WinnerPayed(address indexed winner, uint256 amount);
 
-    constructor(string memory _city) {
-        setPublicChainlinkToken(); //call on kovan testnet
-        oracle = 0xAA1DC356dc4B18f30C347798FD5379F3D77ABC5b;
-        jobId = "235f8b1eeb364efc83c26d0bef2d0c01";
-        fee = 0.1 * 10 ** 18; //0.1 LINK
+    constructor(address _link, address _oracle, string memory _city) {
+        if (_link == address(0)){
+            setPublicChainlinkToken();
+        } else {
+            setChainlinkToken(_link);
+        }
+
+        setChainlinkOracle(_oracle);
+        
         contractAddress = payable(address(this));
         bettingPeriodClosedAt = block.timestamp + 7 days;
         city = _city;
@@ -49,9 +53,9 @@ contract Betting is Ownable, ChainlinkClient {
 
     function requestTemperatureFor(WeatherType _type) public onlyOwner {
         require(_type != WeatherType.EMPTY, "WeatherType must not be: EMPTY");
-        Chainlink.Request memory request = (_type == WeatherType.PREDICTION) ? buildChainlinkRequest(jobId, address(this), this.fulfillTemperaturePrediction.selector) : buildChainlinkRequest(jobId, address(this), this.fulfillActualTemperature.selector);
+        Chainlink.Request memory request = (_type == WeatherType.PREDICTION) ? buildChainlinkRequest(JOB_ID, address(this), this.fulfillTemperaturePrediction.selector) : buildChainlinkRequest(JOB_ID, address(this), this.fulfillActualTemperature.selector);
         request.add("city", city);
-        sendChainlinkRequestTo(oracle, request, fee);
+        sendChainlinkRequestTo(oracle, request, FEE);
     }
 
     function fulfillTemperaturePrediction(bytes32 _requestId, uint256 _result) public recordChainlinkFulfillment(_requestId) {
@@ -78,7 +82,7 @@ contract Betting is Ownable, ChainlinkClient {
     }
 
     function getPrizeMoney() public view returns (uint256) {
-        return (contractAddress.balance * 99) / 100; //we keep the 1% fee
+        return (contractAddress.balance * 99) / 100; //we keep the 1% FEE
     }
 
     function sortPlayersByBetsAndGetWinners() private returns (address[] memory) {

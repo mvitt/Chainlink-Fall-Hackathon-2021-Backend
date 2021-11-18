@@ -55,7 +55,7 @@ contract Betting is Ownable, ChainlinkClient {
         require(_type != WeatherType.EMPTY, "WeatherType must not be: EMPTY");
         Chainlink.Request memory request = (_type == WeatherType.PREDICTION) ? buildChainlinkRequest(JOB_ID, address(this), this.fulfillTemperaturePrediction.selector) : buildChainlinkRequest(JOB_ID, address(this), this.fulfillActualTemperature.selector);
         request.add("city", city);
-        sendChainlinkRequestTo(oracle, request, FEE);
+        sendChainlinkRequest(request, FEE);
     }
 
     function fulfillTemperaturePrediction(bytes32 _requestId, uint256 _result) public recordChainlinkFulfillment(_requestId) {

@@ -9,11 +9,8 @@ import "./WeatherType.sol";
 contract Betting is Ownable, ChainlinkClient {
     using Chainlink for Chainlink.Request;
 
-    address private oracle;
-    bytes32 constant JOB_ID = "235f8b1eeb364efc83c26d0bef2d0c01";
     uint256 constant FEE = LINK_DIVISIBILITY / 10; //0.1 LINK  aka 0.1 * 10 ** 18; 
 
-    string public city;
     uint256 public temperaturePrediction;
     uint256 public actualTemperature;
     uint256 private bettingPeriodClosedAt;
@@ -23,18 +20,15 @@ contract Betting is Ownable, ChainlinkClient {
 
     event WinnerPayed(address indexed winner, uint256 amount);
 
-    constructor(address _link, address _oracle, string memory _city) {
+    constructor(address _link) {
         if (_link == address(0)){
             setPublicChainlinkToken();
         } else {
             setChainlinkToken(_link);
         }
-
-        setChainlinkOracle(_oracle);
         
         contractAddress = payable(address(this));
         bettingPeriodClosedAt = block.timestamp + 7 days;
-        city = _city;
     }
 
     modifier verifyBettingPeriodOpen() {
@@ -51,11 +45,12 @@ contract Betting is Ownable, ChainlinkClient {
         return (block.timestamp < bettingPeriodClosedAt) ? bettingPeriodClosedAt - block.timestamp : 0;
     }
 
-    function requestTemperatureFor(WeatherType _type) public onlyOwner {
+    function requestTemperatureFor(address _oracle, string memory _jobId, string memory _city, WeatherType _type) public onlyOwner {
         require(_type != WeatherType.EMPTY, "WeatherType must not be: EMPTY");
-        Chainlink.Request memory request = (_type == WeatherType.PREDICTION) ? buildChainlinkRequest(JOB_ID, address(this), this.fulfillTemperaturePrediction.selector) : buildChainlinkRequest(JOB_ID, address(this), this.fulfillActualTemperature.selector);
-        request.add("city", city);
-        sendChainlinkRequest(request, FEE);
+        bytes4 selector = (_type == WeatherType.PREDICTION) ? this.fulfillTemperaturePrediction.selector : this.fulfillActualTemperature.selector;
+        Chainlink.Request memory request = buildChainlinkRequest(stringToBytes32(_jobId), address(this), selector);
+        request.add("city", _city);
+        sendChainlinkRequestTo(_oracle, request, FEE);
     }
 
     function fulfillTemperaturePrediction(bytes32 _requestId, uint256 _result) public recordChainlinkFulfillment(_requestId) {
@@ -129,12 +124,23 @@ contract Betting is Ownable, ChainlinkClient {
         }
     }
 
-    function finalResult() public onlyOwner verifyBettingPeriodClosed {
-        requestTemperatureFor(WeatherType.ACTUAL);
+    function finalResult(address _oracle, string memory _jobId, string memory _city) public onlyOwner verifyBettingPeriodClosed {
+        requestTemperatureFor(_oracle, _jobId, _city, WeatherType.ACTUAL);
         payWinners();
         clearBets();
 
         //Reset betting period for next cycle
         bettingPeriodClosedAt = block.timestamp + 7 days;
     }
+
+    function stringToBytes32(string memory source) private pure returns (bytes32 result) {
+        bytes memory tempEmptyStringTest = bytes(source);
+        if (tempEmptyStringTest.length == 0) {
+        return 0x0;
+        }
+
+        assembly { // solhint-disable-line no-inline-assembly
+        result := mload(add(source, 32))
+        }
+  }
 }

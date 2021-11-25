@@ -2,6 +2,7 @@
 //Oracle: 0xFfC4e227f9b033b752BCcc2241F8eCD892bE9D3c
 // Link: 0xa36085F69e2889c224210F603D836748e7dC0088
 //Current Weather JobId: 970382f6a16f480e9b2f2e16ee8ef6a1
+//Five Day Weather JobId: 0db437765a2948c09d4c3939d772a497
 
 
 const hre = require("hardhat");

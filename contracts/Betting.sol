@@ -69,6 +69,18 @@ contract Betting is Ownable, ChainlinkClient {
         users[msg.sender] = user;
     }
 
+    function getAmountBet(address betterAddress) external view returns (uint256){
+        return users[betterAddress].amountBet;
+    }
+
+    function hasBet(address betterAddress) external view returns (bool){
+        return users[betterAddress].hasBet;
+    }
+
+    function getBet(address betterAddress) external view returns (Bet){
+        return users[betterAddress].bet;
+    }
+
     function clearBets() private {
         for (uint256 i = 0; i < usersWhoHaveVoted.length; i++) {
             delete users[usersWhoHaveVoted[i]];

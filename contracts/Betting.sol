@@ -69,7 +69,7 @@ contract Betting is Ownable, ChainlinkClient {
         users[msg.sender] = user;
     }
 
-    function getAmountBet(address betterAddress) external view returns (uint256){
+    function getAmountBetFor(address betterAddress) external view returns (uint256){
         return users[betterAddress].amountBet;
     }
 
@@ -77,8 +77,11 @@ contract Betting is Ownable, ChainlinkClient {
         return users[betterAddress].hasBet;
     }
 
-    function getBet(address betterAddress) external view returns (Bet){
+    function getBetFor(address betterAddress) external view returns (Bet){
         return users[betterAddress].bet;
+    }
+    function fetchAllBetters() external view returns (address[] memory) {
+        return usersWhoHaveVoted;
     }
 
     function clearBets() private {

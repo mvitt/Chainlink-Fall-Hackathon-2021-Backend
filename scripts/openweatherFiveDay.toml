@@ -1,6 +1,6 @@
 type = "directrequest"
 schemaVersion = 1
-name = "openweather-five-day"
+name = "OpenWeather-Five-Day"
 contractAddress = "Add Oracle Address here"
 maxTaskDuration = "0s"
 observationSource = """

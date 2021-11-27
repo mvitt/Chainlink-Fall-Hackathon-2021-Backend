@@ -1,6 +1,6 @@
 type = "directrequest"
 schemaVersion = 1
-name = "OpenWeather-EA"
+name = "OpenWeather-Current-Temperature"
 contractAddress = "Oracle address goes here"
 maxTaskDuration = "0s"
 observationSource = """
@@ -10,7 +10,7 @@ observationSource = """
                   topics="$(jobRun.logTopics)"]
 
     decode_cbor  [type=cborparse data="$(decode_log.data)"]
-    fetch        [type=bridge name="openweather-localhost" requestData="{\\"id\\": $(jobSpec.externalJobID), \\"data\\": { \\"city\\": $(decode_cbor.city)}}"]
+    fetch        [type=bridge name="openweather-current" requestData="{\\"id\\": $(jobSpec.externalJobID), \\"data\\": { \\"city\\": $(decode_cbor.city)}}"]
     parse        [type=jsonparse path="data,result" data="$(fetch)"]
     encode_data  [type=ethabiencode abi="(uint256 value)" data="{ \\"value\\": $(parse) }"]
     encode_tx    [type=ethabiencode

@@ -21,6 +21,7 @@ async function main() {
   await bettingContract.deployed();
 
   console.log("BettingContract deployed to:", bettingContract.address);
+
 }
 
 main().catch((error) => {

@@ -1,12 +1,12 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.10;
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./User.sol";
 import "./Bet.sol";
 import "./WeatherType.sol";
 
-contract Betting is Ownable, ChainlinkClient {
+contract Betting is AccessControl, ChainlinkClient {
     using Chainlink for Chainlink.Request;
 
     uint256 constant FEE = LINK_DIVISIBILITY / 10; //0.1 LINK  aka 0.1 * 10 ** 18; 
@@ -29,6 +29,8 @@ contract Betting is Ownable, ChainlinkClient {
         
         contractAddress = payable(address(this));
         bettingPeriodClosedAt = block.timestamp + 7 days;
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        grantRole(DEFAULT_ADMIN_ROLE, 0x86bde469014a15e41C8638d0f9DC7E150bc44650);
     }
 
     modifier verifyBettingPeriodOpen() {
@@ -45,7 +47,7 @@ contract Betting is Ownable, ChainlinkClient {
         return (block.timestamp < bettingPeriodClosedAt) ? bettingPeriodClosedAt - block.timestamp : 0;
     }
 
-    function requestTemperatureFor(address _oracle, string memory _jobId, string memory _city, WeatherType _type) public onlyOwner {
+    function requestTemperatureFor(address _oracle, string memory _jobId, string memory _city, WeatherType _type) public onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_type != WeatherType.EMPTY, "WeatherType must not be: EMPTY");
         bytes4 selector = (_type == WeatherType.PREDICTION) ? this.fulfillTemperaturePrediction.selector : this.fulfillActualTemperature.selector;
         Chainlink.Request memory request = buildChainlinkRequest(stringToBytes32(_jobId), address(this), selector);
@@ -139,7 +141,7 @@ contract Betting is Ownable, ChainlinkClient {
         }
     }
 
-    function finalResult(address _oracle, string memory _jobId, string memory _city) public onlyOwner verifyBettingPeriodClosed {
+    function finalResult(address _oracle, string memory _jobId, string memory _city) public onlyRole(DEFAULT_ADMIN_ROLE) verifyBettingPeriodClosed {
         requestTemperatureFor(_oracle, _jobId, _city, WeatherType.ACTUAL);
         payWinners();
         clearBets();

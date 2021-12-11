@@ -1,22 +1,26 @@
 {
-  "name": "chainlink-fall-hackathon-2021-backend",
+  "name": "chainlink-fall-hackathon-2021",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=8.0.0"
+  },
   "description": "",
-  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mvitt/Chainlink-Fall-Hackathon-2021-Backend.git"
+    "url": "git+https://github.com/mvitt/chainlink-fall-hackathon-2021.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/mvitt/Chainlink-Fall-Hackathon-2021-Backend/issues"
+    "url": "https://github.com/mvitt/chainlink-fall-hackathon-2021/issues"
   },
-  "homepage": "https://github.com/mvitt/Chainlink-Fall-Hackathon-2021-Backend#readme",
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-etherscan": "^2.1.7",
@@ -41,7 +45,33 @@
     "solidity-coverage": "^0.7.17"
   },
   "dependencies": {
-    "@chainlink/contracts": "^0.2.2",
-    "@openzeppelin/contracts": "^4.3.2"
-  }
+    "@chainlink/contracts": "^0.3.0",
+    "@openzeppelin/contracts": "^4.3.2",
+    "@testing-library/jest-dom": "^5.11.4",
+    "@testing-library/react": "^11.1.0",
+    "@testing-library/user-event": "^12.1.10",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-scripts": "4.0.3",
+    "web-vitals": "^1.0.1"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "packageManager": "yarn@3.1.1"
 }

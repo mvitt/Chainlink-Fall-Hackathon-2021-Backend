@@ -1,4 +1,6 @@
-# Chainlink-Fall-Hackathon-2021-Backend
+# Chainlink-Fall-Hackathon-2021
+
+To run the frontend: `yarn start`
 
 This project demonstrates an advanced Hardhat use case, integrating other tools commonly used alongside Hardhat in the ecosystem.
 

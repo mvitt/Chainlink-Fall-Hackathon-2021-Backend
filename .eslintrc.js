@@ -1,6 +1,6 @@
 module.exports = {
   env: {
-    browser: false,
+    browser: true,
     es2021: true,
     mocha: true,
     node: true,
@@ -8,10 +8,15 @@ module.exports = {
   extends: [
     "standard",
     "plugin:prettier/recommended",
-    "plugin:node/recommended",
+    "eslint:recommended",
+    "plugin:react/recommended",
   ],
   parserOptions: {
     ecmaVersion: 12,
+    sourceType: "module",
+    ecmaFeatures: {
+      jsx: true,
+    },
   },
   overrides: [
     {

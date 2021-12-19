@@ -10,6 +10,8 @@ module.exports = {
     "plugin:prettier/recommended",
     "eslint:recommended",
     "plugin:react/recommended",
+    "react-app",
+    "react-app/jest",
   ],
   parserOptions: {
     ecmaVersion: 12,

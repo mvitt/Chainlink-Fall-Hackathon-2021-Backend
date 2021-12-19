@@ -1,26 +1,21 @@
-import logo from "./logo.svg";
-import "./App.css";
 import React from "react";
+import LoginButton from "./LoginButton";
+import MetaMaskNeeded from "./MetaMaskNeeded";
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+  if (typeof window.ethereum !== "undefined") {
+    return (
+      <div>
+        <LoginButton />
+      </div>
+    );
+  } else {
+    return (
+      <div>
+        <MetaMaskNeeded />
+      </div>
+    );
+  }
 }
 
 export default App;

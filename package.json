@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "start": "yarn run watch:css && react-scripts start",
+    "build": "yarn run watch:css && react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "watch:css": "postcss src/styles/tailwind.css -o src/styles/output.css"
   },
   "repository": {
     "type": "git",
@@ -37,7 +38,7 @@
     "ethers": "^5.5.1",
     "hardhat": "^2.6.8",
     "hardhat-gas-reporter": "^1.0.4",
-    "postcss": "latest",
+    "postcss": "^8.4.5",
     "postcss-cli": "^9.1.0",
     "prettier": "^2.4.1",
     "prettier-plugin-solidity": "^1.0.0-beta.13",

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import "./LoginButton.css";
+import "./styles/output.css";
 
 let currentAccount = null;
 
@@ -42,11 +42,14 @@ function LoginButton() {
   };
 
   return (
-    <button
-      onClick={isLoggedIn ? showDisconnectInstructions : connectToMetaMask}
-    >
-      {isLoggedIn ? "Log Out" : "Log In"}
-    </button>
+    <>
+      <button
+        className="flex items-center px-3 py-2 border rounded text-gray-500 border-gray-600 hover:text-gray-800 hover:border-teal-500 appearance-none focus:outline-none"
+        onClick={isLoggedIn ? showDisconnectInstructions : connectToMetaMask}
+      >
+        {isLoggedIn ? "Log Out" : "Log In"}
+      </button>
+    </>
   );
 }
 

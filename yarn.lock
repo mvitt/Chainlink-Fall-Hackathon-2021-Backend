@@ -6886,7 +6886,7 @@ __metadata:
     ethers: ^5.5.1
     hardhat: ^2.6.8
     hardhat-gas-reporter: ^1.0.4
-    postcss: latest
+    postcss: ^8.4.5
     postcss-cli: ^9.1.0
     prettier: ^2.4.1
     prettier-plugin-solidity: ^1.0.0-beta.13
@@ -18446,7 +18446,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postcss@npm:^8.1.6, postcss@npm:latest":
+"postcss@npm:^8.1.6, postcss@npm:^8.4.5":
   version: 8.4.5
   resolution: "postcss@npm:8.4.5"
   dependencies:

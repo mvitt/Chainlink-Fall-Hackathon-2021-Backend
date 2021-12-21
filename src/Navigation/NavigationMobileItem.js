@@ -11,6 +11,7 @@ function NavigationMobileItem(props) {
             ? "block text-sm px-2 py-4 hover:text-white bg-orange-400 font-semibold transition duration-300"
             : "block text-sm px-2 py-4 hover:text-white hover:bg-orange-400 font-semibold transition duration-300"
         }
+        onClick={() => props.handleClick(props.position)}
       >
         {props.itemText}
       </a>
@@ -21,6 +22,8 @@ NavigationMobileItem.propTypes = {
   itemText: PropTypes.string,
   itemLink: PropTypes.string,
   isActive: PropTypes.bool,
+  position: PropTypes.number,
+  handleClick: PropTypes.func,
 };
 
 export default NavigationMobileItem;

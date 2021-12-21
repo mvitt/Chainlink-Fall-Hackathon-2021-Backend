@@ -1,16 +1,39 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useState } from "react/cjs/react.development";
 import "../styles/output.css";
-import NavigationItem from "./NavigationItem";
-import NavigationMobileItem from "./NavigationMobileItem";
 import NavigationLeftLogo from "./NavigationLeftLogo";
+import NavigationHamburgerButton from "./NavigationHamburgerButton";
+import NavigationMobileView from "./NavigationMobileView";
+import NavigationView from "./NavigationView";
 
 function Navigation() {
   const [isMobileViewOpen, setMobileViewOpen] = useState(false);
+  const [currentSelection, setCurrentSelection] = useState([
+    true,
+    false,
+    false,
+    false,
+  ]);
 
   const toggleMobileMenu = () => {
     setMobileViewOpen(!isMobileViewOpen);
   };
+
+  const setCurrentSelectionCallback = (positionClicked) => {
+    const temp = [false, false, false, false];
+    temp[positionClicked] = true;
+    setCurrentSelection(temp);
+  };
+
+  useEffect(() => {
+    window.addEventListener("resize", () => {
+      setMobileViewOpen(false);
+    });
+    return () =>
+      window.removeEventListener("resize", () => {
+        setMobileViewOpen(false);
+      });
+  }, []);
 
   return (
     <nav className="bg-white shadow-lg">
@@ -22,69 +45,17 @@ function Navigation() {
             imageLink="https://www.feirox.com/rivu/2016/04/Klara-1.png"
             imageAlt="Logo"
           />
-
-          <div className="hidden md:flex items-center space-x-1">
-            <NavigationItem itemText="Home" itemLink="#test" isActive={true} />
-            <NavigationItem
-              itemText="Services"
-              itemLink="#test"
-              isActive={false}
-            />
-            <NavigationItem
-              itemText="About"
-              itemLink="#test"
-              isActive={false}
-            />
-            <NavigationItem
-              itemText="Contact Us"
-              itemLink="#test"
-              isActive={false}
-            />
-          </div>
-          <div
-            className="md:hidden flex items-center"
-            onClick={toggleMobileMenu}
-          >
-            <button className="outline-none menu-button">
-              <svg
-                className="w-6 h-6 text-gray-500"
-                x-show="! showMenu"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 00 24 24"
-                stroke="currentColor"
-              >
-                <path d="m4 6h16M4 12h16M4 18h16"></path>
-              </svg>
-            </button>
-          </div>
+          <NavigationView
+            handleClick={setCurrentSelectionCallback}
+            highlight={currentSelection}
+          />
+          <NavigationHamburgerButton handleClick={toggleMobileMenu} />
         </div>
-        <div
-          className={isMobileViewOpen ? "mobile-menu" : "hidden mobile-menu"}
-        >
-          <NavigationMobileItem
-            itemText="Home"
-            itemLink="#home"
-            isActive={true}
-          />
-          <NavigationMobileItem
-            itemText="Services"
-            itemLink="#home"
-            isActive={false}
-          />
-          <NavigationMobileItem
-            itemText="About"
-            itemLink="#home"
-            isActive={false}
-          />
-          <NavigationMobileItem
-            itemText="Contact Us"
-            itemLink="#home"
-            isActive={false}
-          />
-        </div>
+        <NavigationMobileView
+          isMobileViewOpen={isMobileViewOpen}
+          handleClick={setCurrentSelectionCallback}
+          highlight={currentSelection}
+        />
       </div>
     </nav>
   );
